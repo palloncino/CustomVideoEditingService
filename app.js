@@ -36,7 +36,7 @@ app.post("/api/video-upload", upload.single("video"), (req, res, next) => {
           ffmpegOutcome = error;
         }
       });
-    res.statusCode(200).send({ ffmpegOutcome });
+    res.status(200).send({ ffmpegOutcome });
   } catch (error) {
     res.status(500).send(error.message);
   }
