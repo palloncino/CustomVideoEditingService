@@ -12,11 +12,11 @@ const router = express.Router();
 // +-----------------------------------------------------------+
 
 // +-REQUEST---------------------------------------------------+
-// | /POST ${base_url}/api/video-upload
-// | Body type: form-data
-// |
-// | Key: video, Value: *.mp4, *.mov (type: file)
-// | (Optional) Key: bgcolor, Value: CSS color (type: text)
+// | /POST ${base_url}/api/video-upload                        |
+// | Body type: form-data                                      |
+// |                                                           |
+// | Key: video, Value: *.mp4, *.mov (type: file)               |
+// | (Optional) Key: bgcolor, Value: CSS color (type: text)    |
 // +-----------------------------------------------------------+
 router.post("/video-upload", upload.single("video"), (req, res, next) => {
   const videoPath = req.file.path;
