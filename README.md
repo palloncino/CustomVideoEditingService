@@ -53,7 +53,11 @@ npm start
 ```
 
 ## API Endpoints
-- `POST /api/video-upload`: Uploads and processes the video file.
+
+| Endpoint                | Method | Description                        | Body Type  | Parameters                                   | Optional Parameters                         |
+|-------------------------|--------|------------------------------------|------------|---------------------------------------------|--------------------------------------------|
+| `/api/video-upload`     | POST   | Uploads and processes the video file. | form-data  | `video`: *.mp4, *.mov (type: file)          | `bgcolor`: CSS color (type: text)         |
+
 
 ## Contributing
 Feel free to open issues and pull requests!
