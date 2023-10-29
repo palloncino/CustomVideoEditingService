@@ -1,8 +1,8 @@
 const express = require("express");
 const ffmpeg = require("fluent-ffmpeg");
 const multer = require("multer");
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const upload = multer({ dest: "../uploads/" });
 const router = express.Router();
@@ -21,7 +21,13 @@ const router = express.Router();
 router.post("/video-upload", upload.single("video"), (req, res, next) => {
   const videoPath = req.file.path;
   const bgColor = req.body.bgcolor;
-  const outputFilePath = path.join(__dirname, "temp", "processed_video.mp4");
+
+  const outputDirectory = path.join(__dirname, "temp");
+  const outputPath = path.join(outputDirectory, "processed_video.mp4");
+
+  if (!fs.existsSync(outputDirectory)) {
+    fs.mkdirSync(outputDirectory, { recursive: true });
+  }
 
   try {
     // Set PATHs - make sure you installed ffmpeg on your machine
@@ -35,9 +41,9 @@ router.post("/video-upload", upload.single("video"), (req, res, next) => {
           bgColor || "black"
         }`,
         `-f mp4`,
-        `-y`, // Overwrite output file if it exists
+        `-y`,
       ])
-      .output(outputFilePath)
+      .output(outputPath)
       .on("start", function (commandLine) {
         console.log("Spawned FFmpeg with command: " + commandLine);
       })
@@ -45,23 +51,22 @@ router.post("/video-upload", upload.single("video"), (req, res, next) => {
         console.error("Error:", err.message);
         console.error("ffmpeg stdout:", stdout);
         console.error("ffmpeg stderr:", stderr);
-        res.status(500).send(err.message);
       })
       .on("end", function () {
-        const fileStream = fs.createReadStream(outputFilePath);
+        const fileStream = fs.createReadStream(outputPath);
         res.set({
           "Content-Type": "video/mp4",
           "Content-Disposition": "attachment; filename=processed_video.mp4",
         });
         fileStream.pipe(res);
         fileStream.on("end", () => {
-          fs.unlink(outputFilePath, (err) => {
+          fs.unlink(outputPath, (err) => {
             if (err)
               console.error("Error deleting temporary file:", err.message);
           });
         });
-      })
-      .run();
+      });
+    command.run();
   } catch (error) {
     res.status(500).send(error.message);
   }
