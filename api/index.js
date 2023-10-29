@@ -1,6 +1,8 @@
 const express = require("express");
 const ffmpeg = require("fluent-ffmpeg");
 const multer = require("multer");
+const fs = require('fs');
+const path = require('path');
 
 const upload = multer({ dest: "../uploads/" });
 const router = express.Router();
@@ -12,23 +14,30 @@ const router = express.Router();
 // +-REQUEST---------------------------------------------------+
 // | /POST ${base_url}/api/video-upload
 // | Body type: form-data
-// | 
+// |
 // | Key: video, Value: *.mp4, *.mov (type: file)
 // | (Optional) Key: bgcolor, Value: CSS color (type: text)
 // +-----------------------------------------------------------+
 router.post("/video-upload", upload.single("video"), (req, res, next) => {
   const videoPath = req.file.path;
   const bgColor = req.body.bgcolor;
+  const outputFilePath = path.join(__dirname, "temp", "processed_video.mp4");
+
   try {
+    // Set PATHs - make sure you installed ffmpeg on your machine
     ffmpeg.setFfmpegPath("/usr/local/bin/ffmpeg");
     ffmpeg.setFfprobePath("/usr/local/bin/ffprobe");
-    ffmpeg(videoPath)
+
+    const command = ffmpeg(videoPath)
       .addOptions([
         `-filter_complex`,
         `scale='iw*sar':'ih',pad='max(iw\\,ih)':'max(iw\\,ih)':'(ow-iw)/2':'(oh-ih)/2':${
           bgColor || "black"
         }`,
+        `-f mp4`,
+        `-y`, // Overwrite output file if it exists
       ])
+      .output(outputFilePath)
       .on("start", function (commandLine) {
         console.log("Spawned FFmpeg with command: " + commandLine);
       })
@@ -36,20 +45,23 @@ router.post("/video-upload", upload.single("video"), (req, res, next) => {
         console.error("Error:", err.message);
         console.error("ffmpeg stdout:", stdout);
         console.error("ffmpeg stderr:", stderr);
+        res.status(500).send(err.message);
       })
-      .on("end", function (output) {
-        console.log("Video processed:", output);
-        res
-          .status(200)
-          .send({ message: "Video processed successfully", output });
+      .on("end", function () {
+        const fileStream = fs.createReadStream(outputFilePath);
+        res.set({
+          "Content-Type": "video/mp4",
+          "Content-Disposition": "attachment; filename=processed_video.mp4",
+        });
+        fileStream.pipe(res);
+        fileStream.on("end", () => {
+          fs.unlink(outputFilePath, (err) => {
+            if (err)
+              console.error("Error deleting temporary file:", err.message);
+          });
+        });
       })
-      .on("stderr", function (stderrLine) {
-        console.log("Stderr output: " + stderrLine);
-      })
-      .on("stdout", function (stdoutLine) {
-        console.log("Stdout output: " + stdoutLine);
-      })
-      .saveToFile("uploaded_video.mp4");
+      .run();
   } catch (error) {
     res.status(500).send(error.message);
   }
