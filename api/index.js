@@ -19,18 +19,21 @@ const router = express.Router();
 // | (Optional) Key: bgcolor, Value: CSS color (type: text)    |
 // +-----------------------------------------------------------+
 router.post("/video-upload", upload.single("video"), (req, res, next) => {
-  const videoPath = req.file.path;
+  const videoPath = req.file.path; 
   const bgColor = req.body.bgcolor;
 
   const outputDirectory = path.join(__dirname, "temp");
   const outputPath = path.join(outputDirectory, "processed_video.mp4");
+  
+  // videoPath: ../uploads/d5b8297805c765f4517620f081ac4158
+  // outputPath: /Users/user01/folder01/CustomVideoEditingService/api/temp/processed_video.mp4
 
   if (!fs.existsSync(outputDirectory)) {
     fs.mkdirSync(outputDirectory, { recursive: true });
   }
 
   try {
-    // Set PATHs - make sure you installed ffmpeg on your machine
+    // Set PATHs - make sure you installed ffmpeg on your machine | replace with your paths
     ffmpeg.setFfmpegPath("/usr/local/bin/ffmpeg");
     ffmpeg.setFfprobePath("/usr/local/bin/ffprobe");
 
@@ -53,17 +56,22 @@ router.post("/video-upload", upload.single("video"), (req, res, next) => {
         console.error("ffmpeg stderr:", stderr);
       })
       .on("end", function () {
-        const fileStream = fs.createReadStream(outputPath);
-        res.set({
-          "Content-Type": "video/mp4",
-          "Content-Disposition": "attachment; filename=processed_video.mp4",
-        });
-        fileStream.pipe(res);
-        fileStream.on("end", () => {
-          fs.unlink(outputPath, (err) => {
-            if (err)
-              console.error("Error deleting temporary file:", err.message);
-          });
+        fs.readFile(outputPath, (err, data) => {
+          if (err) {
+            console.error("Error reading file:", err.message);
+            res.status(500).send(err.message);
+          } else {
+            const base64 = data.toString("base64");
+            res.set({
+              "Content-Type": "text/plain",
+              "Content-Disposition": "attachment; filename=processed_video.txt",
+            });
+            res.send(base64);
+            fs.unlink(outputPath, (err) => {
+              if (err)
+                console.error("Error deleting temporary file:", err.message);
+            });
+          }
         });
       });
     command.run();
